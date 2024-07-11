@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Speech to Text</title>
+    <link rel="stylesheet" href="static/css/style.css">
+</head>
+<body>
+    <h1>Speech to Text</h1>
+    <input type="file" id="audioFile" accept="audio/wav">
+    <button onclick="convertSpeechToText()">Convert to Text</button>
+    <p id="result"></p>
+    <p id="status"></p>
+
+    <script>
+        async function convertSpeechToText() {
+            const fileInput = document.getElementById('audioFile');
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+
+            const response = await fetch('/speech-to-text', {
+                method: 'POST',
+                body: formData
+            });
+
+            const result = await response.json();
+
+            if (result.text) {
+                document.getElementById('result').innerText = result.text;
+            } else {
+                document.getElementById('result').innerText = result.error;
+            }
+        }
+    </script>
+</body>
+</html>

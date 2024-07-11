@@ -1,0 +1,6 @@
+Flask
+SpeechRecognition
+librosa
+numpy<2.0.0
+scikit-learn
+joblib
