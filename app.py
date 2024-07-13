@@ -2,6 +2,8 @@ from flask import Flask, request, render_template, jsonify
 import speech_recognition as sr
 import joblib
 from utils.feature_extraction import extract_features
+from pydub import AudioSegment
+import ffmpeg
 
 app = Flask(__name__)
 
@@ -50,6 +52,53 @@ def speech_to_text():
             return jsonify({'error': 'Speech was unintelligible'})
         except sr.RequestError:
             return jsonify({'error': 'Could not request results from Google Speech Recognition service'})
+
+@app.route('/record-speech-to-text', methods=['POST'])
+def record_speech_to_text():
+    if 'file' not in request.files:
+        return jsonify({'error': 'No file part in the request'}), 400
+
+    audio_file = request.files['file']
+    if audio_file.filename == '':
+        return jsonify({'error': 'No file selected for uploading'}), 400
+
+    # Save the uploaded audio file to a temporary path
+    audio_path = "Akbank-ML-Project\\temp_audio"
+    audio_file.save(audio_path)
+   
+    
+
+    # # Convert the audio file to WAV format using pydub
+    # wav_path = "temp_audio.wav"
+    # audio = AudioSegment.from_file(audio_path)
+    # audio.export(wav_path, format="wav")
+
+   # Convert the audio file to WAV format using ffmpeg
+    wav_path = "Akbank-ML-Project\\temp_audio.wav"
+    ffmpeg.input(audio_path).output(wav_path).run()
+
+
+    # Initialize the recognizer
+    recognizer = sr.Recognizer()
+
+    # Extract features from the WAV audio file
+    features = extract_features(wav_path)
+    speaker_prob = model.predict_proba([features])[0][1]
+
+    if speaker_prob < 0.7:  # Change this value to be more strict or lenient
+        return jsonify({'error': 'Speaker not recognized'})
+
+    # Perform speech recognition
+    with sr.AudioFile(wav_path) as source:
+        audio = recognizer.record(source)
+        try:
+            text = recognizer.recognize_google(audio, language="tr-TR")
+            return jsonify({'text': text})
+        except sr.UnknownValueError:
+            return jsonify({'error': 'Speech was unintelligible'})
+        except sr.RequestError:
+            return jsonify({'error': 'Could not request results from Google Speech Recognition service'})
+
 
 if __name__ == '__main__':
     app.run(debug=True)

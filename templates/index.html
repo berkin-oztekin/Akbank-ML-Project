@@ -10,24 +10,90 @@
     <button onclick="convertSpeechToText()">Convert to Text</button>
     <p id="result"></p>
     <p id="status"></p>
+    <p id="recordStatus"></p>
+
+    <h2>Record Audio</h2>
+    <button id="recordButton">Start Recording</button>
+    <button id="stopButton" disabled>Stop Recording</button>
 
     <script>
+        let mediaRecorder;
+        let audioChunks = [];
+
+        document.getElementById('recordButton').onclick = async () => {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                mediaRecorder = new MediaRecorder(stream);
+
+                mediaRecorder.ondataavailable = event => {
+                    audioChunks.push(event.data);
+                };
+
+                mediaRecorder.onstop = async () => {
+                    const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });  // Formatı webm olarak değiştir
+                    const formData = new FormData();
+                    formData.append('file', audioBlob, 'audio.webm');  // Dosya adı .webm uzantılı
+
+                    document.getElementById('recordStatus').innerText = 'Sending audio for transcription...';
+
+                    const response = await fetch('/record-speech-to-text', {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    const result = await response.json();
+
+                    if (result.text) {
+                        document.getElementById('result').innerText = result.text;
+                    } else {
+                        document.getElementById('result').innerText = result.error;
+                    }
+
+                    document.getElementById('recordStatus').innerText = 'Recording stopped. You can record again.';
+                };
+
+                mediaRecorder.start();
+                document.getElementById('recordButton').disabled = true;
+                document.getElementById('stopButton').disabled = false;
+                document.getElementById('recordStatus').innerText = 'Recording...';
+            } catch (error) {
+                document.getElementById('recordStatus').innerText = 'Error: ' + error.message;
+            }
+        };
+
+        // Stop recording
+        document.getElementById('stopButton').onclick = () => {
+            mediaRecorder.stop();
+            document.getElementById('recordButton').disabled = false;
+            document.getElementById('stopButton').disabled = true;
+        };
+
+        // Convert uploaded audio file to text
         async function convertSpeechToText() {
             const fileInput = document.getElementById('audioFile');
             const formData = new FormData();
             formData.append('file', fileInput.files[0]);
 
-            const response = await fetch('/speech-to-text', {
-                method: 'POST',
-                body: formData
-            });
+            try {
+                const response = await fetch('/speech-to-text', {
+                    method: 'POST',
+                    body: formData
+                });
 
-            const result = await response.json();
+                if (!response.ok) {
+                    throw new Error('Network response was not ok.');
+                }
 
-            if (result.text) {
-                document.getElementById('result').innerText = result.text;
-            } else {
-                document.getElementById('result').innerText = result.error;
+                const result = await response.json();
+
+                if (result.text) {
+                    document.getElementById('result').innerText = result.text;
+                } else {
+                    document.getElementById('result').innerText = result.error;
+                }
+
+            } catch (error) {
+                document.getElementById('result').innerText = 'Error: ' + error.message;
             }
         }
     </script>
