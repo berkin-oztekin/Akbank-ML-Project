@@ -2,57 +2,64 @@
 <html>
 <head>
     <title>Speech to Text</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <link rel="stylesheet" href="static/css/style.css">
+    <script src="static/js/recorder.js"></script>
 </head>
 <body>
-    <h1>Speech to Text</h1>
-    <input type="file" id="audioFile" accept="audio/wav">
-    <button onclick="convertSpeechToText()">Convert to Text</button>
-    <p id="result"></p>
-    <p id="status"></p>
-    <p id="recordStatus"></p>
+    <div class="container">
+        <h1>Speech to Text</h1>
 
-    <h2>Record Audio</h2>
-    <button id="recordButton">Start Recording</button>
-    <button id="stopButton" disabled>Stop Recording</button>
+        <div class="upload-section">
+            <input type="file" id="audioFile" accept="audio/wav" class="custom-file-input">
+            <label for="audioFile" class="custom-file-label"><i class="fas fa-upload"></i> Choose a WAV file</label>
+            <button onclick="convertSpeechToText()" class="action-button">
+                <i class="fas fa-play"></i> Convert to Text
+            </button>
+        </div>
+
+        <div class="output">
+            <p id="result"></p>
+            <p id="status"></p>
+            <p id="recordStatus"></p>
+        </div>
+
+        <div class="record-section">
+            <h2>Record Audio</h2>
+            <button id="recordButton" class="action-button">
+                <i class="fas fa-microphone"></i> Start Recording
+            </button>
+            <button id="stopButton" class="action-button" disabled>
+                <i class="fas fa-stop"></i> Stop Recording
+            </button>
+        </div>
+
+        <div class="record-section">
+            <h2>Record Target Speaker</h2>
+            <button id="recordTargetButton" class="action-button">
+                <i class="fas fa-microphone"></i> Start Recording Target Speaker
+            </button>
+            <button id="stopTargetButton" class="action-button" disabled>
+                <i class="fas fa-stop"></i> Stop Recording Target Speaker
+            </button>
+        </div>
+    </div>
 
     <script>
-        let mediaRecorder;
-        let audioChunks = [];
+        let recorder;
+        let audioContext;
+        let audioStream;
+        let targetRecorder;
+        let targetAudioStream;
 
         document.getElementById('recordButton').onclick = async () => {
             try {
-                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                mediaRecorder = new MediaRecorder(stream);
+                audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const input = audioContext.createMediaStreamSource(audioStream);
+                recorder = new Recorder(input, { numChannels: 1 });
 
-                mediaRecorder.ondataavailable = event => {
-                    audioChunks.push(event.data);
-                };
-
-                mediaRecorder.onstop = async () => {
-                    const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });  // Formatı webm olarak değiştir
-                    const formData = new FormData();
-                    formData.append('file', audioBlob, 'audio.webm');  // Dosya adı .webm uzantılı
-
-                    document.getElementById('recordStatus').innerText = 'Sending audio for transcription...';
-
-                    const response = await fetch('/record-speech-to-text', {
-                        method: 'POST',
-                        body: formData
-                    });
-
-                    const result = await response.json();
-
-                    if (result.text) {
-                        document.getElementById('result').innerText = result.text;
-                    } else {
-                        document.getElementById('result').innerText = result.error;
-                    }
-
-                    document.getElementById('recordStatus').innerText = 'Recording stopped. You can record again.';
-                };
-
-                mediaRecorder.start();
+                recorder.record();
                 document.getElementById('recordButton').disabled = true;
                 document.getElementById('stopButton').disabled = false;
                 document.getElementById('recordStatus').innerText = 'Recording...';
@@ -61,14 +68,83 @@
             }
         };
 
-        // Stop recording
         document.getElementById('stopButton').onclick = () => {
-            mediaRecorder.stop();
-            document.getElementById('recordButton').disabled = false;
-            document.getElementById('stopButton').disabled = true;
+            recorder.stop();
+            audioStream.getAudioTracks()[0].stop();
+            recorder.exportWAV(blob => {
+                const formData = new FormData();
+                formData.append('file', blob, 'audio.wav');
+
+                document.getElementById('recordStatus').innerText = 'Sending audio for transcription...';
+
+                fetch('/record-speech-to-text', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(result => {
+                    if (result.text) {
+                        document.getElementById('result').innerText = result.text;
+                    } else {
+                        document.getElementById('result').innerText = result.error;
+                    }
+                    document.getElementById('recordStatus').innerText = 'Recording stopped. You can record again.';
+                })
+                .catch(error => {
+                    document.getElementById('recordStatus').innerText = 'Error: ' + error.message;
+                });
+
+                document.getElementById('recordButton').disabled = false;
+                document.getElementById('stopButton').disabled = true;
+            });
         };
 
-        // Convert uploaded audio file to text
+        document.getElementById('recordTargetButton').onclick = async () => {
+            try {
+                targetAudioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const input = audioContext.createMediaStreamSource(targetAudioStream);
+                targetRecorder = new Recorder(input, { numChannels: 1 });
+
+                targetRecorder.record();
+                document.getElementById('recordTargetButton').disabled = true;
+                document.getElementById('stopTargetButton').disabled = false;
+                document.getElementById('recordStatus').innerText = 'Recording target speaker...';
+            } catch (error) {
+                document.getElementById('recordStatus').innerText = 'Error: ' + error.message;
+            }
+        };
+
+        document.getElementById('stopTargetButton').onclick = () => {
+            targetRecorder.stop();
+            targetAudioStream.getAudioTracks()[0].stop();
+            targetRecorder.exportWAV(blob => {
+                const formData = new FormData();
+                formData.append('file', blob, 'audio.wav');
+
+                document.getElementById('recordStatus').innerText = 'Sending target speaker audio...';
+
+                fetch('/record-target-speaker', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(result => {
+                    if (result.success) {
+                        document.getElementById('recordStatus').innerText = 'Target speaker audio saved successfully.';
+                    } else {
+                        document.getElementById('recordStatus').innerText = 'Error saving target speaker audio.';
+                    }
+                })
+                .catch(error => {
+                    document.getElementById('recordStatus').innerText = 'Error: ' + error.message;
+                });
+
+                document.getElementById('recordTargetButton').disabled = false;
+                document.getElementById('stopTargetButton').disabled = true;
+            });
+        };
+
         async function convertSpeechToText() {
             const fileInput = document.getElementById('audioFile');
             const formData = new FormData();
