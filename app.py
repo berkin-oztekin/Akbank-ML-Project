@@ -1,4 +1,6 @@
 from flask import Flask, request, render_template, jsonify
+import os
+import uuid
 import speech_recognition as sr
 import joblib
 from utils.feature_extraction import extract_features
@@ -21,35 +23,72 @@ def speech_to_text():
     if audio_file.filename == '':
         return jsonify({'error': 'No file selected for uploading'}), 400
 
-    # Creates an instance of the Recognizer class from the speech_recognition library
     recognizer = sr.Recognizer()
-    # Specifies the path to temporarily save the uploaded audio file
     audio_path = "temp_audio.wav"
-    # Saves the uploaded audio file to the specified path
     audio_file.save(audio_path)
 
-    # Extracts features from the saved audio
     features = extract_features(audio_path)
-    # Uses the pre-trained model to predict the probability that the speaker is the target speaker
     speaker_prob = model.predict_proba([features])[0][1]
 
-    # Adjusted threshold for recognizing the target speaker
-    if speaker_prob < 0.7:  # Change this value to be more strict or lenient
+    if speaker_prob < 0.7:
         return jsonify({'error': 'Speaker not recognized'})
 
-    # Opens the audio file for reading
     with sr.AudioFile(audio_path) as source:
-        # Records the audio from the file
         audio = recognizer.record(source)
         try:
-            # Uses the 'Google Web Speech API' to recognize speech in the audio
             text = recognizer.recognize_google(audio, language="tr-TR")
-            # Returns the recognized text as a JSON response
             return jsonify({'text': text})
         except sr.UnknownValueError:
             return jsonify({'error': 'Speech was unintelligible'})
         except sr.RequestError:
             return jsonify({'error': 'Could not request results from Google Speech Recognition service'})
+
+@app.route('/process-speech', methods=['POST'])
+def process_speech():
+    if 'file' not in request.files:
+        return jsonify({'error': 'No file part in the request'}), 400
+
+    audio_file = request.files['file']
+    audio_path = "temp_speech.wav"
+    audio_file.save(audio_path)
+
+    recognizer = sr.Recognizer()
+    features = extract_features(audio_path)
+    speaker_prob = model.predict_proba([features])[0][1]
+
+    if speaker_prob < 0.7:
+        return jsonify({'error': 'Speaker not recognized'})
+
+    with sr.AudioFile(audio_path) as source:
+        audio = recognizer.record(source)
+        try:
+            text = recognizer.recognize_google(audio, language="tr-TR")
+            return jsonify({'text': text})
+        except sr.UnknownValueError:
+            return jsonify({'error': 'Speech was unintelligible'})
+        except sr.RequestError:
+            return jsonify({'error': 'Could not request results from Google Speech Recognition service'})
+
+@app.route('/process-target-speech', methods=['POST'])
+def process_target_speech():
+    if 'file' not in request.files:
+        return jsonify({'error': 'No file part in the request'}), 400
+
+    audio_file = request.files['file']
+    audio_path = f"model_training/voice_samples/target_speaker/{uuid.uuid4()}.wav"
+    os.makedirs(os.path.dirname(audio_path), exist_ok=True)
+    audio_file.save(audio_path)
+
+    recognizer = sr.Recognizer()
+    with sr.AudioFile(audio_path) as source:
+        audio = recognizer.record(source)
+        try:
+            text = recognizer.recognize_google(audio, language="tr-TR")
+            return jsonify({'text': text, 'success': True})
+        except sr.UnknownValueError:
+            return jsonify({'error': 'Speech was unintelligible', 'success': False})
+        except sr.RequestError:
+            return jsonify({'error': 'Could not request results from Google Speech Recognition service', 'success': False})
 
 if __name__ == '__main__':
     app.run(debug=True)
