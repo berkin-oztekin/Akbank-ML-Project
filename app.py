@@ -1,7 +1,5 @@
 from flask import Flask, request, render_template, jsonify
 import os
-import wave
-import io
 import uuid
 import speech_recognition as sr
 import joblib
@@ -12,11 +10,9 @@ app = Flask(__name__)
 # Load the trained model
 model = joblib.load('model_training/speaker_recognition_model.pkl')
 
-
 @app.route('/')
 def index():
     return render_template('index.html')
-
 
 @app.route('/speech-to-text', methods=['POST'])
 def speech_to_text():
@@ -47,36 +43,16 @@ def speech_to_text():
         except sr.RequestError:
             return jsonify({'error': 'Could not request results from Google Speech Recognition service'})
 
-
-@app.route('/record-speech-to-text', methods=['POST'])
-def record_speech_to_text():
+@app.route('/process-speech', methods=['POST'])
+def process_speech():
     if 'file' not in request.files:
         return jsonify({'error': 'No file part in the request'}), 400
 
     audio_file = request.files['file']
-    if audio_file.filename == '':
-        return jsonify({'error': 'No file selected for uploading'}), 400
-
-    # Read the audio file from the request
-    audio_data = audio_file.read()
-    audio_stream = io.BytesIO(audio_data)
-
-    # Ensure the file is in WAV format and use it directly
-    try:
-        with wave.open(audio_stream, 'rb') as wf:
-            print(f"Channels: {wf.getnchannels()}, Sample Width: {wf.getsampwidth()}, Frame Rate: {wf.getframerate()}")
-            if wf.getnchannels() != 1 or wf.getsampwidth() != 2 or wf.getframerate() not in [16000, 44100, 48000]:
-                return jsonify({'error': 'Unsupported audio format'})
-
-            audio_path = "temp_audio.wav"
-            with open(audio_path, 'wb') as f:
-                f.write(audio_data)
-    except wave.Error as e:
-        print(f"Wave Error: {e}")
-        return jsonify({'error': 'File is not in WAV format'})
+    audio_path = "temp_speech.wav"
+    audio_file.save(audio_path)
 
     recognizer = sr.Recognizer()
-
     features = extract_features(audio_path)
     speaker_prob = model.predict_proba([features])[0][1]
 
@@ -93,31 +69,26 @@ def record_speech_to_text():
         except sr.RequestError:
             return jsonify({'error': 'Could not request results from Google Speech Recognition service'})
 
-
-@app.route('/record-target-speaker', methods=['POST'])
-def record_target_speaker():
+@app.route('/process-target-speech', methods=['POST'])
+def process_target_speech():
     if 'file' not in request.files:
         return jsonify({'error': 'No file part in the request'}), 400
 
     audio_file = request.files['file']
-    if audio_file.filename == '':
-        return jsonify({'error': 'No file selected for uploading'}), 400
+    audio_path = f"model_training/voice_samples/target_speaker/{uuid.uuid4()}.wav"
+    os.makedirs(os.path.dirname(audio_path), exist_ok=True)
+    audio_file.save(audio_path)
 
-    target_dir = 'model_training/voice_samples/target_speaker/'
-    os.makedirs(target_dir, exist_ok=True)
-
-    # Generate a random filename
-    random_filename = f"{uuid.uuid4()}.wav"
-    target_path = os.path.join(target_dir, random_filename)
-
-    try:
-        with open(target_path, 'wb') as f:
-            f.write(audio_file.read())
-        return jsonify({'success': True, 'filename': random_filename})
-    except Exception as e:
-        print(f"Error saving target speaker audio: {e}")
-        return jsonify({'error': 'Error saving target speaker audio'})
-
+    recognizer = sr.Recognizer()
+    with sr.AudioFile(audio_path) as source:
+        audio = recognizer.record(source)
+        try:
+            text = recognizer.recognize_google(audio, language="tr-TR")
+            return jsonify({'text': text, 'success': True})
+        except sr.UnknownValueError:
+            return jsonify({'error': 'Speech was unintelligible', 'success': False})
+        except sr.RequestError:
+            return jsonify({'error': 'Could not request results from Google Speech Recognition service', 'success': False})
 
 if __name__ == '__main__':
     app.run(debug=True)
