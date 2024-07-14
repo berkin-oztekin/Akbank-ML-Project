@@ -4,3 +4,5 @@ librosa
 numpy<2.0.0
 scikit-learn
 joblib
+pip install pvporcupine
+pip install pyaudio
