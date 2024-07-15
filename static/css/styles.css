@@ -61,3 +61,16 @@ p {
     color: #333;
 }
 
+  @keyframes slideInLeft {
+            from {
+                transform: translateX(400px);
+            }
+            to {
+                transform: translateX(-125%);
+            }
+        }
+
+        .container {
+        position: relative;
+        animation: slideInLeft 1.5s ease forwards;
+}
