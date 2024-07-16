@@ -131,7 +131,7 @@ def chatgpt():
     prompt = request.json.get('prompt')
     try:
         response = openai.ChatCompletion.create(
-            model="davinci-002",
+            model="gpt-3.5-turbo",
             messages=[{"role": "user", "content": prompt}]
         )
         return jsonify({'response': response.choices[0].message['content']})
