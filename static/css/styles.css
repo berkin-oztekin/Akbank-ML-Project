@@ -61,3 +61,20 @@ p {
     color: #333;
 }
 
+.record-section {
+    margin-top: 20px;
+}
+
+@keyframes slideInLeft {
+            from {
+                transform: translateX(10000px);
+            }
+            to {
+                transform: translateX(-120%);
+            }
+        }
+
+        .container {
+        position: relative;
+        animation: slideInLeft 1.5s ease forwards;
+}

@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>VoiceGuard - Hey Akbank</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="/static/css/styles.css">
+    <script src="/static/js/recorder.js"></script>
+</head>
+<body>
+    <div class="container">
+        <h1>VoiceGuard - Hey Akbank</h1>
+        <p id="status">Listening for "Hey Akbank"...</p>
+        <p id="recordStatus"></p>
+        <p id="result"></p>
+    </div>
+
+    <script>
+        let recorder;
+        let audioContext;
+        let audioStream;
+        let recognition;
+        let isRecording = false;
+
+        async function startListening() {
+            try {
+                audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const input = audioContext.createMediaStreamSource(audioStream);
+                recorder = new Recorder(input, { numChannels: 1 });
+
+                // Use Web Speech API to detect wake word
+                const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+                recognition = new SpeechRecognition();
+                recognition.lang = 'tr-TR';
+                recognition.interimResults = false;
+                recognition.maxAlternatives = 1;
+
+                recognition.onresult = (event) => {
+                    const speechResult = event.results[0][0].transcript.toLowerCase();
+                    if (speechResult.includes("hey akbank")) {
+                        recognition.stop();
+                        document.getElementById('status').innerText = 'Wake word detected, starting recording...';
+                        setTimeout(() => {
+                            recorder.record();
+                            isRecording = true;
+                            document.getElementById('status').innerText = 'Recording...';
+                        }, 2000); // 2 seconds delay
+                    }
+                };
+
+                recognition.onspeechend = () => {
+                    if (isRecording) {
+                        stopRecording();
+                    }
+                };
+
+                recognition.onerror = (event) => {
+                    console.error('Speech recognition error detected: ' + event.error);
+                    recognition.stop();
+                    if (!isRecording) {
+                        recognition.start(); // Restart recognition if not recording
+                    }
+                };
+
+                recognition.onend = () => {
+                    if (!isRecording) {
+                        recognition.start(); // Restart recognition if not recording
+                    }
+                };
+
+                recognition.start();
+                document.getElementById('status').innerText = 'Listening for "Hey Akbank"...';
+
+            } catch (err) {
+                console.error('Error: ' + err);
+                document.getElementById('status').innerText = 'Error: ' + err.message;
+            }
+        }
+
+        function stopRecording() {
+            recorder.stop();
+            audioStream.getAudioTracks()[0].stop();
+            recorder.exportWAV(blob => processSpeech(blob));
+            recorder.clear();
+            audioStream = null;
+            isRecording = false;
+            document.getElementById('recordStatus').innerText = 'Recording stopped.';
+        }
+
+        function processSpeech(blob) {
+            const formData = new FormData();
+            formData.append('file', blob, 'audio.wav');
+
+            fetch('/process-wakeword-speech', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(result => {
+                if (result.text) {
+                    document.getElementById('result').innerText = result.text;
+                } else {
+                    document.getElementById('result').innerText = result.error;
+                }
+                startListening();  // Restart listening after processing
+            })
+            .catch(error => {
+                document.getElementById('result').innerText = 'Error: ' + error.message;
+                startListening();  // Restart listening after processing
+            });
+        }
+
+        window.onload = startListening;
+    </script>
+</body>
+</html>
