@@ -1,14 +1,20 @@
+import openai
 from flask import Flask, request, render_template, jsonify
 import os
 import uuid
 import speech_recognition as sr
 import joblib
 from utils.feature_extraction import extract_features
+from dotenv import load_dotenv
+
+load_dotenv()
 
 app = Flask(__name__)
 
 # Load the trained model
 model = joblib.load('model_training/speaker_recognition_model.pkl')
+
+openai.api_key = os.getenv('API_KEY')
 
 @app.route('/')
 def index():
@@ -100,25 +106,38 @@ def process_wakeword_speech():
         return jsonify({'error': 'No file part in the request'}), 400
 
     audio_file = request.files['file']
-    audio_path = "temp_wakeword_speech.wav"
+    audio_path = "temp_wakeword.wav"
     audio_file.save(audio_path)
 
     recognizer = sr.Recognizer()
-    features = extract_features(audio_path)
-    speaker_prob = model.predict_proba([features])[0][1]
-
-    if speaker_prob < 0.7:
-        return jsonify({'error': 'Speaker not recognized'})
-
     with sr.AudioFile(audio_path) as source:
         audio = recognizer.record(source)
         try:
             text = recognizer.recognize_google(audio, language="tr-TR")
+            features = extract_features(audio_path)
+            speaker_prob = model.predict_proba([features])[0][1]
+
+            if speaker_prob < 0.7:
+                return jsonify({'error': 'Speaker not recognized', 'text': text})
+
             return jsonify({'text': text})
         except sr.UnknownValueError:
             return jsonify({'error': 'Speech was unintelligible'})
         except sr.RequestError:
             return jsonify({'error': 'Could not request results from Google Speech Recognition service'})
+
+@app.route('/chatgpt', methods=['POST'])
+def chatgpt():
+    prompt = request.json.get('prompt')
+    try:
+        response = openai.ChatCompletion.create(
+            model="davinci-002",
+            messages=[{"role": "user", "content": prompt}]
+        )
+        return jsonify({'response': response.choices[0].message['content']})
+    except Exception as e:
+        print(f"ChatGPT API call failed: {e}")
+        return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
     app.run(debug=True)

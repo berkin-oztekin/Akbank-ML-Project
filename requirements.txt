@@ -4,3 +4,5 @@ librosa
 numpy<2.0.0
 scikit-learn
 joblib
+openai<0.28.0
+python-dotenv

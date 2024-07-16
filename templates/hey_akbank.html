@@ -12,6 +12,7 @@
         <p id="status">Listening for "Hey Akbank"...</p>
         <p id="recordStatus"></p>
         <p id="result"></p>
+        <p id="chatgptResponse"></p>
     </div>
 
     <script>
@@ -37,7 +38,7 @@
 
                 recognition.onresult = (event) => {
                     const speechResult = event.results[0][0].transcript.toLowerCase();
-                    if (speechResult.includes("hey akbank")) {
+                    if (speechResult.includes("hey dostum")) {
                         recognition.stop();
                         document.getElementById('status').innerText = 'Wake word detected, starting recording...';
                         setTimeout(() => {
@@ -73,7 +74,13 @@
 
             } catch (err) {
                 console.error('Error: ' + err);
-                document.getElementById('status').innerText = 'Error: ' + err.message;
+                if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
+                    document.getElementById('status').innerText = 'Microphone not found. Please ensure your microphone is connected and enabled.';
+                } else if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+                    document.getElementById('status').innerText = 'Microphone access denied. Please allow the browser to access your microphone.';
+                } else {
+                    document.getElementById('status').innerText = 'Error: ' + err.message;
+                }
             }
         }
 
@@ -99,6 +106,7 @@
             .then(result => {
                 if (result.text) {
                     document.getElementById('result').innerText = result.text;
+                    callChatGPT(result.text);
                 } else {
                     document.getElementById('result').innerText = result.error;
                 }
@@ -107,6 +115,27 @@
             .catch(error => {
                 document.getElementById('result').innerText = 'Error: ' + error.message;
                 startListening();  // Restart listening after processing
+            });
+        }
+
+        function callChatGPT(prompt) {
+            fetch('/chatgpt', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ prompt: prompt })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.response) {
+                    document.getElementById('chatgptResponse').innerText = data.response;
+                } else {
+                    document.getElementById('chatgptResponse').innerText = data.error;
+                }
+            })
+            .catch(error => {
+                document.getElementById('chatgptResponse').innerText = 'Error: ' + error.message;
             });
         }
 
