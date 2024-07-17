@@ -10,58 +10,89 @@ body {
     background-color: #f0f0f0;
 }
 
-.container {
-    text-align: center;
-    background: #fff;
+.main-container {
+    display: flex;
+    height: 100vh;
+    width: 100%;
+}
+
+.sidebar {
+    width: 25%;
+    background-color: #007bff;
+    color: white;
     padding: 20px;
-    border-radius: 10px;
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    text-align: center;
 }
 
-h1 {
+.sidebar h1 {
+    font-size: 24px;
     margin-bottom: 20px;
 }
 
-.upload-section, .record-section, .output {
-    margin-bottom: 20px;
-}
-
-.custom-file-input {
-    display: none;
-}
-
-.custom-file-label {
-    display: inline-block;
-    cursor: pointer;
-    padding: 10px 20px;
-    background: #007bff;
-    color: #fff;
-    border-radius: 5px;
-    margin-right: 10px;
-}
-
-.action-button {
-    padding: 10px 20px;
-    font-size: 16px;
-    margin-bottom: 20px;
-    background: #007bff;
-    color: #fff;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
-    transition: background 0.3s;
-}
-
-.action-button:hover {
-    background: #0056b3;
-}
-
-p {
+.sidebar p {
     font-size: 18px;
-    color: #333;
+    color: white;
 }
 
-.record-section {
-    margin-top: 20px;
+.chat-container {
+    width: 75%;
+    background-color: #f9f9f9;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
 }
 
+.chat-container h2 {
+    font-size: 24px;
+    margin-bottom: 20px;
+}
+
+.chat-console {
+    flex-grow: 1;
+    background: white;
+    padding: 10px;
+    border-radius: 5px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    overflow-y: auto;
+    max-height: calc(100vh - 100px);
+}
+
+.chat-message {
+    margin-bottom: 10px;
+    padding: 10px;
+    border-radius: 10px;
+}
+
+.user-message {
+    background-color: #d1e7ff;
+    align-self: flex-start;
+}
+
+.bot-message {
+    background-color: #f0f0f0;
+    align-self: flex-end;
+}
+
+.error-message {
+    background-color: #ffcccc;
+    color: #cc0000;
+    align-self: center;
+}
+
+::-webkit-scrollbar {
+    width: 10px;
+}
+
+::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}

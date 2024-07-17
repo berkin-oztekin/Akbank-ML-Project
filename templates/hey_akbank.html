@@ -7,12 +7,17 @@
     <script src="/static/js/recorder.js"></script>
 </head>
 <body>
-    <div class="container">
-        <h1>VoiceGuard - Hey Akbank</h1>
-        <p id="status">Listening for "Hey Akbank"...</p>
-        <p id="recordStatus"></p>
-        <p id="result"></p>
-        <p id="chatgptResponse"></p>
+    <div class="main-container">
+        <div class="sidebar">
+            <h1>VoiceGuard - Hey Akbank</h1>
+            <p id="status">Listening for "Hey Akbank"...</p>
+            <p id="recordStatus"></p>
+            <p id="result"></p>
+        </div>
+        <div class="chat-container">
+            <h2>ChatGPT Responses</h2>
+            <div id="chatgptResponse" class="chat-console"></div>
+        </div>
     </div>
 
     <script>
@@ -128,14 +133,19 @@
             })
             .then(response => response.json())
             .then(data => {
+                const chatBox = document.getElementById('chatgptResponse');
                 if (data.response) {
-                    document.getElementById('chatgptResponse').innerText = data.response;
+                    chatBox.innerHTML += `<div class="chat-message user-message"><strong>User:</strong> ${prompt}</div>`;
+                    chatBox.innerHTML += `<div class="chat-message bot-message"><strong>ChatGPT:</strong> ${data.response}</div>`;
                 } else {
-                    document.getElementById('chatgptResponse').innerText = data.error;
+                    chatBox.innerHTML += `<div class="chat-message error-message">Error: ${data.error}</div>`;
                 }
+                chatBox.scrollTop = chatBox.scrollHeight;
             })
             .catch(error => {
-                document.getElementById('chatgptResponse').innerText = 'Error: ' + error.message;
+                const chatBox = document.getElementById('chatgptResponse');
+                chatBox.innerHTML += `<div class="chat-message error-message">Error: ${error.message}</div>`;
+                chatBox.scrollTop = chatBox.scrollHeight;
             });
         }
 
