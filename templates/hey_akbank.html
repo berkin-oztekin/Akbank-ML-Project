@@ -9,13 +9,13 @@
 <body>
     <div class="container">
         <div class="sidebar">
-            <h1>VoiceGuard - Hey Akbank</h1>
+            <img src="/static/images/akbank.jpg" alt="Akbank Logo" width="250" height="100">
             <p id="status">Listening for "Hey Akbank"...</p>
             <p id="recordStatus"></p>
             <p id="result"></p>
         </div>
         <div class="chat-container">
-            <h2>ChatGPT Responses</h2>
+            <h2>AkBot Responses</h2>
             <div id="chatConsole" class="chat-console"></div>
         </div>
     </div>
@@ -135,7 +135,7 @@
             .then(response => response.json())
             .then(data => {
                 if (data.response) {
-                    const botMessage = `<div class="bot-message"><strong>ChatGPT:</strong> ${data.response}</div>`;
+                    const botMessage = `<div class="bot-message"><strong>AkBot:</strong> ${data.response}</div>`;
                     document.getElementById('chatConsole').innerHTML += botMessage;
                 } else {
                     document.getElementById('chatConsole').innerHTML += `<div class="error-message">${data.error}</div>`;
