@@ -7,15 +7,16 @@ body {
     align-items: center;
     justify-content: center;
     height: 100vh;
-    background-color: #f0f0f0;
+    background-color: #d11718;
 }
 
-.container {
+.container-body {
     text-align: center;
     background: #fff;
     padding: 20px;
     border-radius: 10px;
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    margin-top: 20px;
 }
 
 h1 {
@@ -34,7 +35,7 @@ h1 {
     display: inline-block;
     cursor: pointer;
     padding: 10px 20px;
-    background: #007bff;
+    background: #d11718;
     color: #fff;
     border-radius: 5px;
     margin-right: 10px;
@@ -44,7 +45,7 @@ h1 {
     padding: 10px 20px;
     font-size: 16px;
     margin-bottom: 20px;
-    background: #007bff;
+    background: #d11718;
     color: #fff;
     border: none;
     border-radius: 5px;
@@ -53,7 +54,7 @@ h1 {
 }
 
 .action-button:hover {
-    background: #0056b3;
+    background: red;
 }
 
 p {
@@ -63,4 +64,25 @@ p {
 
 .record-section {
     margin-top: 20px;
+}
+
+.container {
+    padding: 0;
+    width: 100%;
+}
+.navbar-top {
+    position: fixed;
+    top: 0;
+    width: 100%;
+    z-index: 1000;
+}
+
+.nav-link {
+    background-color: white;
+    color: #000;
+    margin-right: 10px;
+}
+
+.nav-link:hover {
+    color: #d11718;
 }
