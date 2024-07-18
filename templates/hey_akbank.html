@@ -102,17 +102,18 @@
             const formData = new FormData();
             formData.append('file', blob, 'audio.wav');
 
-            fetch('/verify-target-speech', {
+            fetch('/process-speech', {
                 method: 'POST',
                 body: formData
             })
             .then(response => response.json())
             .then(result => {
-                if (result.valid) {
+                if (result.text) {
                     document.getElementById('result').innerText = 'Target speaker validated. Processing speech...';
+                    document.getElementById('result').innerText = result.text;
                     callChatGPT(result.text);
                 } else {
-                    document.getElementById('result').innerText = 'Speaker not recognized.';
+                    document.getElementById('result').innerText = result.error;
                 }
                 startListening();
             })

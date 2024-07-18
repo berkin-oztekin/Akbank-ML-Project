@@ -113,32 +113,5 @@ def chatgpt():
         print(f"ChatGPT API call failed: {e}")
         return jsonify({'error': str(e)}), 500
 
-@app.route('/verify-target-speech', methods=['POST'])
-def verify_target_speech():
-    if 'file' not in request.files:
-        return jsonify({'error': 'No file part in the request'}), 400
-
-    audio_file = request.files['file']
-    audio_path = "temp_speech.wav"
-    audio_file.save(audio_path)
-
-    recognizer = sr.Recognizer()
-    features = extract_features(audio_path)
-    speaker_prob = model.predict_proba([features])[0][1]
-
-    if speaker_prob < 0.7:
-        return jsonify({'valid': False, 'error': 'Speaker not recognized'})
-
-    with sr.AudioFile(audio_path) as source:
-        audio = recognizer.record(source)
-        try:
-            text = recognizer.recognize_google(audio, language="tr-TR")
-            return jsonify({'valid': True, 'text': text})
-        except sr.UnknownValueError:
-            return jsonify({'valid': False, 'error': 'Speech was unintelligible'})
-        except sr.RequestError:
-            return jsonify({'valid': False, 'error': 'Could not request results from Google Speech Recognition service'})
-
-
 if __name__ == '__main__':
     app.run(debug=True)
